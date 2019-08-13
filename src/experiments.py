@@ -80,7 +80,7 @@ def initialize_model_directory(args, random_seed=None):
         else:
             print('* Policy Gradient Baseline: None')
         if args.action_dropout_anneal_interval < 1000:
-            hyperparam_sig = '{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}'.format(
+            hyperparam_sig = '{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}'.format(
                 args.baseline,
                 args.entity_dim,
                 args.relation_dim,
@@ -92,12 +92,13 @@ def initialize_model_directory(args, random_seed=None):
                 args.action_dropout_anneal_factor,
                 args.action_dropout_anneal_interval,
                 args.bandwidth,
-                args.beta
+                args.beta,
+                args.gamma
             )
             if args.mu != 1.0:
                 hyperparam_sig += '-{}'.format(args.mu)
         else:
-            hyperparam_sig = '{}-{}-{}-{}-{}-{}-{}-{}-{}-{}'.format(
+            hyperparam_sig = '{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}'.format(
                 args.baseline,
                 args.entity_dim,
                 args.relation_dim,
@@ -107,7 +108,8 @@ def initialize_model_directory(args, random_seed=None):
                 args.ff_dropout_rate,
                 args.action_dropout_rate,
                 args.bandwidth,
-                args.beta
+                args.beta,
+                args.gamma
             )
         if args.reward_shaping_threshold > 0:
             hyperparam_sig += '-{}'.format(args.reward_shaping_threshold)

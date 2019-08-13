@@ -63,7 +63,7 @@ class LFramework(nn.Module):
         print('--------------------------')
         print()
 
-    def run_train(self, train_data, dev_data):
+    def run_train(self, train_data, dev_data, test_data, store_metric_history=True):
         self.print_all_model_parameters()
 
         if self.optim is None:
@@ -73,6 +73,9 @@ class LFramework(nn.Module):
         # Track dev metrics changes
         best_dev_metrics = 0
         dev_metrics_history = []
+        best_dev_metric = -np.inf
+        best_epoch = 0
+        best_test_at_dev = None
 
         for epoch_id in range(self.start_epoch, self.num_epochs):
             print('Epoch {}'.format(epoch_id))
@@ -145,10 +148,14 @@ class LFramework(nn.Module):
                 self.batch_size = self.dev_batch_size
                 dev_scores = self.forward(dev_data, verbose=False)
                 print('Dev set performance: (correct evaluation)')
-                _, _, _, _, mrr = src.eval.hits_and_ranks(dev_data, dev_scores, self.kg.dev_objects, verbose=True)
-                metrics = mrr
+                dev_metrics = src.eval.hits_and_ranks(dev_data, dev_scores, self.kg.dev_objects, verbose=True)
+                metrics = dev_metrics['mrr']
                 print('Dev set performance: (include test set labels)')
                 src.eval.hits_and_ranks(dev_data, dev_scores, self.kg.all_objects, verbose=True)
+                print('Test set performance: (with test set labels)')
+                test_scores = self.forward(test_data, verbose=False)
+                test_metrics = src.eval.hits_and_ranks(test_data, test_scores, self.kg.all_objects, verbose=True)
+
                 # Action dropout anneaking
                 if self.model.startswith('point'):
                     eta = self.action_dropout_anneal_interval
@@ -157,16 +164,38 @@ class LFramework(nn.Module):
                         self.action_dropout_rate *= self.action_dropout_anneal_factor 
                         print('Decreasing action dropout rate: {} -> {}'.format(
                             old_action_dropout_rate, self.action_dropout_rate))
+
+                if store_metric_history:
+
+                    def _store_metrics(metrics, eval_type='dev'):
+                        print('Storing Metrics!')
+                        for metric_type, metric_value in metrics.items():
+                            file_path = os.path.join(self.model_dir, '{}_{}.txt'.format(eval_type, metric_type))
+                            src.eval._write_data_to_file(file_path=file_path, data=metric_value)
+
+                    _store_metrics(dev_metrics, eval_type='dev')
+                    _store_metrics(test_metrics, eval_type='test')
+
                 # Save checkpoint
-                if metrics > best_dev_metrics:
+                if metrics > best_dev_metric:
+                    best_dev_metrics = dev_metrics
+                    best_test_at_dev = test_metrics
+                    best_epoch = epoch_id
                     self.save_checkpoint(checkpoint_id=epoch_id, epoch_id=epoch_id, is_best=True)
-                    best_dev_metrics = metrics
+                    best_dev_metric = metrics
                     with open(os.path.join(self.model_dir, 'best_dev_iteration.dat'), 'w') as o_f:
                         o_f.write('{}'.format(epoch_id))
                 else:
                     # Early stopping
                     if epoch_id >= self.num_wait_epochs and metrics < np.mean(dev_metrics_history[-self.num_wait_epochs:]):
                         break
+
+                print('#' * 80)
+                print('Best test metrics at best dev: ')
+                print('Epoch: {}'.format(best_epoch))
+                src.eval.print_metrics(best_test_at_dev)
+                print('#' * 80)
+
                 dev_metrics_history.append(metrics)
                 if self.run_analysis:
                     num_path_types_file = os.path.join(self.model_dir, 'num_path_types.dat')

@@ -15,6 +15,16 @@ import torch
 
 from src.parse_args import args
 from src.data_utils import NO_OP_ENTITY_ID, DUMMY_ENTITY_ID
+import os
+
+
+def _write_data_to_file(file_path, data):
+    if os.path.exists(file_path):
+        append_write = 'a'
+    else:
+        append_write = 'w+'
+    with open(file_path, append_write) as handle:
+        handle.write(str(data) + "\n")
 
 
 def hits_and_ranks(examples, scores, all_answers, verbose=False):
@@ -64,14 +74,29 @@ def hits_and_ranks(examples, scores, all_answers, verbose=False):
     hits_at_10 = float(hits_at_10) / len(examples)
     mrr = float(mrr) / len(examples)
 
-    if verbose:
-        print('Hits@1 = {:.3f}'.format(hits_at_1))
-        print('Hits@3 = {:.3f}'.format(hits_at_3))
-        print('Hits@5 = {:.3f}'.format(hits_at_5))
-        print('Hits@10 = {:.3f}'.format(hits_at_10))
-        print('MRR = {:.3f}'.format(mrr))
+    metrics = {'hits_at_1': hits_at_1,
+               'hits_at_3': hits_at_3,
+               'hits_at_5': hits_at_5,
+               'hits_at_10': hits_at_10,
+               'mrr': mrr}
 
-    return hits_at_1, hits_at_3, hits_at_5, hits_at_10, mrr
+    if verbose:
+        # print('Hits@1 = {:.3f}'.format(hits_at_1))
+        # print('Hits@3 = {:.3f}'.format(hits_at_3))
+        # print('Hits@5 = {:.3f}'.format(hits_at_5))
+        # print('Hits@10 = {:.3f}'.format(hits_at_10))
+        # print('MRR = {:.3f}'.format(mrr))
+        print_metrics(metrics)
+
+    return metrics
+
+
+def print_metrics(metrics):
+    print('Hits@1 = {}'.format(metrics['hits_at_1']))
+    print('Hits@3 = {}'.format(metrics['hits_at_3']))
+    print('Hits@5 = {}'.format(metrics['hits_at_5']))
+    print('Hits@10 = {}'.format(metrics['hits_at_10']))
+    print('MRR = {}'.format(metrics['mrr']))
 
 def hits_at_k(examples, scores, all_answers, verbose=False):
     """

@@ -66,7 +66,7 @@ def beam_search(pn, e_s, q, e_t, kg, num_steps, beam_size, return_path_component
         action_offset = (action_batch_offset + action_beam_offset).view(-1)
         return (next_r, next_e), log_action_prob, action_offset
 
-    def top_k_answer_unique(log_action_dist, action_space):
+    def top_k_answer_unique(log_action_dist, action_space, do_unique=True):
         """
         Get top k unique entities
             - k = beam_size if the beam size is smaller than or equal to the beam action space size
@@ -97,7 +97,7 @@ def beam_search(pn, e_s, q, e_t, kg, num_steps, beam_size, return_path_component
             log_action_dist_b = log_action_dist[i]
             r_space_b = r_space[i]
             e_space_b = e_space[i]
-            unique_e_space_b = var_cuda(torch.unique(e_space_b.data.cpu()))
+            unique_e_space_b = var_cuda(torch.unique(e_space_b.data.cpu())) if do_unique else e_space_b
             unique_log_action_dist, unique_idx = unique_max(unique_e_space_b, e_space_b, log_action_dist_b)
             k_prime = min(len(unique_e_space_b), k)
             top_unique_log_action_dist, top_unique_idx2 = torch.topk(unique_log_action_dist, k_prime)
